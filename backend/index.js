@@ -1,6 +1,7 @@
 const neo4j = require('neo4j-driver').v1;
 const express = require('express');
 const bodyParser = require('body-parser');
+const sample = require('lodash.sample');
 
 const driver = neo4j.driver(
   'bolt://localhost:7687/',
@@ -16,11 +17,13 @@ app.get('/show/:show/characters', (req, res) => {
   const { show } = req.params;
   session
     .run(
-      'MATCH (c: character)-[:character_in]->(show {name: $show}) RETURN c',
+      'MATCH (c: character)-[:character_in]->(show {name: $show}) RETURN c.name as name',
       { show }
     )
     .then(response =>
-      res.json({ records: response.records.map(record => record._fields[0]) })
+      res.json({
+        characters: response.records.map(record => record._fields[0]),
+      })
     )
     .catch(err => console.log(err));
 });
@@ -47,7 +50,7 @@ const buildSecond = (word, secondId) => {
   return `MERGE (${secondId}:end)`;
 };
 
-app.post('/show/:show/:name/sentence', (req, res) => {
+app.post('/show/:show/:name/sentence', async (req, res) => {
   const { show, name } = req.params;
   const { text } = req.body;
   const words = text.split(' ');
@@ -78,6 +81,52 @@ app.post('/show/:show/:name/sentence', (req, res) => {
     .run(query, args)
     .then(response => res.json({ response }))
     .catch(err => console.log(err));
+});
+
+const keyValueToObject = (keys, values) =>
+  keys.reduce((acc, key, idx) => ({ ...acc, [key]: values[idx] }), {});
+
+const cryptoToJson = async ({ records }) =>
+  records.map(record => keyValueToObject(record.keys, record._fields));
+
+const runCrypto = async (query, params) => {
+  const response = await session.run(query, params);
+  const json = await cryptoToJson(response);
+  return json;
+};
+
+app.get('/show/:show/:name/sentence', async (req, res) => {
+  const { show, name } = req.params;
+  const firstWordQuery = `MATCH (c:character {name: $name})-[:character_in]->(show {name: $show}) 
+                          MATCH (c)-[:starts_with]->(w)
+                          RETURN ID(c) as id, w.value as value`;
+  const nextWordQuery = `MATCH (w:word {value: $word})
+                         MATCH (w)-[:followed_by {character_id: $characterId}]->(next)
+                         RETURN labels(next)[0] as type, next.value as value`;
+  const retVal = await runCrypto(firstWordQuery, {
+    name,
+    show,
+  }).catch(err => console.log(err));
+  let {
+    id: { low: characterId },
+    value: word,
+  } = sample(retVal);
+
+  let sentence = word;
+  for (let i = 0; i < 100; i += 1) {
+    // Limit sentences to maximum of 100 words.
+    const nextWordResponse = await runCrypto(nextWordQuery, {
+      word,
+      characterId,
+    });
+    const { type, value: nextWord } = sample(nextWordResponse);
+    if (type === 'end') {
+      break;
+    }
+    word = nextWord;
+    sentence = `${sentence} ${word}`;
+  }
+  res.json({ sentence });
 });
 
 app.listen(port, () =>
