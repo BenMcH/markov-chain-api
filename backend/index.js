@@ -2,6 +2,7 @@ const neo4j = require('neo4j-driver').v1;
 const express = require('express');
 const bodyParser = require('body-parser');
 const sample = require('lodash.sample');
+const cors = require('cors');
 
 const driver = neo4j.driver(
   'bolt://localhost:7687/',
@@ -10,6 +11,7 @@ const driver = neo4j.driver(
 const session = driver.session();
 
 const app = express();
+app.use(cors());
 app.use(bodyParser.json());
 const port = 8252;
 
@@ -64,8 +66,8 @@ app.post('/show/:show/:name/sentence', async (req, res) => {
   const args = { show, name };
   zippedWords.forEach((wordPair, index) => {
     const [firstWord, secondWord] = wordPair;
-    const firstId = `1${index}`;
-    const secondId = `2${index}`;
+    const firstId = `a${index}`;
+    const secondId = `b${index}`;
     args[firstId] = firstWord;
     args[secondId] = secondWord;
     const secondWordNode = buildSecond(secondWord, secondId);
@@ -127,6 +129,12 @@ app.get('/show/:show/:name/sentence', async (req, res) => {
     sentence = `${sentence} ${word}`;
   }
   res.json({ sentence });
+});
+
+app.get('/shows', async (req, res) => {
+  const query = 'MATCH(s:show) RETURN s.name as name';
+  const shows = await runCrypto(query, {}).catch(console.log);
+  res.json(shows);
 });
 
 app.listen(port, () =>
