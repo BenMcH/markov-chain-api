@@ -1,6 +1,6 @@
-import React, {useState} from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import { useBackendGet, postData } from '../components/Backend';
+import { useBackendGet } from '../components/Backend';
 import SingleAttributeForm from '../components/SingleAttributeForm';
 
 function Character(props) {
