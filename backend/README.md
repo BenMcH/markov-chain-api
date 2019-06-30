@@ -17,8 +17,14 @@ Next, in this directory, run `npm install` to fetch the required dependencies an
 
 ## Usage
 
+GET http://localhost:8252/shows
+Returns a list of shows
+
 GET http://localhost:8252/show/:show_name/characters
 Returns a list of characters from the show
+
+GET http://localhost:8252/show/:show_name/:character_name/sentence
+Returns a generated sentence based on the graph model
 
 POST http://localhost:8252/show/:show/character
 Body: { "name": "string" }
@@ -27,7 +33,3 @@ Creates a character for :show with name `name`
 POST http://localhost:8252/show/:show/:name/sentence
 Body: { text }
 Adds nodes representing the text provided in the context of the graph
-
-TODO:
-
-- Add random walk to GET random sentence
