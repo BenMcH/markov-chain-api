@@ -1,45 +1,39 @@
-const neo4j = require('neo4j-driver').v1;
 const express = require('express');
 const bodyParser = require('body-parser');
 const sample = require('lodash.sample');
 const cors = require('cors');
+const { runCrypto } = require('./datastore');
 
-const driver = neo4j.driver(
-  'bolt://localhost:7687/',
-  neo4j.auth.basic('neo4j', 'password')
-);
-const session = driver.session();
+const SENTENCE_MAX_WORDS = 100;
 
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 const port = 8252;
 
-app.get('/show/:show/characters', (req, res) => {
+app.get('/show/:show/characters', async (req, res) => {
   const { show } = req.params;
-  session
-    .run(
-      'MATCH (c: character)-[:character_in]->(show {name: $show}) RETURN c.name as name',
-      { show }
-    )
-    .then(response =>
-      res.json({
-        characters: response.records.map(record => record._fields[0]),
-      })
-    )
-    .catch(err => console.log(err));
+  const response = await runCrypto(
+    'MATCH (c: character)-[:character_in]->(show {name: $show}) RETURN c.name as name',
+    { show }
+  ).catch(console.log);
+  res.json({
+    characters: response,
+  });
 });
 
-app.post('/show/:show/character', (req, res) => {
-  session
-    .run(
-      'MERGE (s: show {name: $show}) MERGE (c: character {name: $name})-[:character_in]->(s)',
-      {
-        name: req.body.name,
-        show: req.params.show,
-      }
-    )
-    .catch(err => console.log(err));
+app.post('/show/:show/character', async (req, res) => {
+  await runCrypto(
+    'MERGE (s: show {name: $show}) MERGE (c: character {name: $name})-[:character_in]->(s)',
+    {
+      name: req.body.name,
+      show: req.params.show,
+    },
+    false
+  ).catch(err => {
+    console.log(err);
+    res.sendStatus(500);
+  });
   res.sendStatus(200);
 });
 
@@ -79,22 +73,26 @@ app.post('/show/:show/:name/sentence', async (req, res) => {
       query = `${query} ${secondWordNode} CREATE (c)-[:starts_with]->(${secondId})`;
     }
   });
-  session
-    .run(query, args)
-    .then(response => res.json({ response }))
-    .catch(err => console.log(err));
+  await runCrypto(query, args, false).catch(err => {
+    console.log(err);
+    res.sendStatus(500);
+  });
+  res.sendStatus(201);
 });
 
-const keyValueToObject = (keys, values) =>
-  keys.reduce((acc, key, idx) => ({ ...acc, [key]: values[idx] }), {});
-
-const cryptoToJson = async ({ records }) =>
-  records.map(record => keyValueToObject(record.keys, record._fields));
-
-const runCrypto = async (query, params) => {
-  const response = await session.run(query, params);
-  const json = await cryptoToJson(response);
-  return json;
+const generateSentence = async (word, characterId, depth = 1) => {
+  const nextWordQuery = `MATCH (w:word {value: $word})
+                         MATCH (w)-[:followed_by {character_id: $characterId}]->(next)
+                         RETURN labels(next)[0] as type, next.value as value`;
+  const nextWordResponse = await runCrypto(nextWordQuery, {
+    word,
+    characterId,
+  });
+  const { type, value: nextWord } = sample(nextWordResponse);
+  if (type === 'end' || depth > SENTENCE_MAX_WORDS) {
+    return word;
+  }
+  return `${word} ${await generateSentence(nextWord, characterId, depth + 1)}`;
 };
 
 app.get('/show/:show/:name/sentence', async (req, res) => {
@@ -102,31 +100,23 @@ app.get('/show/:show/:name/sentence', async (req, res) => {
   const firstWordQuery = `MATCH (c:character {name: $name})-[:character_in]->(show {name: $show}) 
                           MATCH (c)-[:starts_with]->(w)
                           RETURN ID(c) as id, w.value as value`;
-  const nextWordQuery = `MATCH (w:word {value: $word})
-                         MATCH (w)-[:followed_by {character_id: $characterId}]->(next)
-                         RETURN labels(next)[0] as type, next.value as value`;
   const retVal = await runCrypto(firstWordQuery, {
     name,
     show,
-  }).catch(err => console.log(err));
-  let {
-    id: { low: characterId },
-    value: word,
-  } = sample(retVal);
+  }).catch(err => {
+    console.log(err);
+    res.sendStatus(500);
+  });
+  const sampledValue = sample(retVal || []);
+  let sentence = '';
+  if (sampledValue) {
+    const {
+      id: { low: characterId },
+      value: word,
+    } = sampledValue;
 
-  let sentence = word;
-  for (let i = 0; i < 100; i += 1) {
-    // Limit sentences to maximum of 100 words.
-    const nextWordResponse = await runCrypto(nextWordQuery, {
-      word,
-      characterId,
-    });
-    const { type, value: nextWord } = sample(nextWordResponse);
-    if (type === 'end') {
-      break;
-    }
-    word = nextWord;
-    sentence = `${sentence} ${word}`;
+    sentence = await generateSentence(word, characterId);
+    console.log('sentence:', sentence);
   }
   res.json({ sentence });
 });

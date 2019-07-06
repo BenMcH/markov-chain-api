@@ -5,7 +5,8 @@ import SingleAttributeForm from '../components/SingleAttributeForm';
 
 function Character(props) {
     const {show, character} = props.match.params;
-    const [{sentence}, getNewSentence] = useBackendGet(`/show/${show}/${character}/sentence`, "", console.log);
+    const [{sentence}, getNewSentence] = useBackendGet(`/show/${show}/${character}/sentence`, "");
+    console.log("sentence", sentence)
     return (
         <div id="character-page">
             <h1>{character}</h1>

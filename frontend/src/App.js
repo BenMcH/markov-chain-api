@@ -8,11 +8,11 @@ import Character from './pages/Character';
 function App() {
   return (
     <Router>
-      <div className="App">
+      <main className="App">
         <Route path="/" exact component={Home} />
         <Route path="/show/:show/characters" exact component={Characters} />
         <Route path="/show/:show/character/:character" exact component={Character} />
-      </div>
+      </main>
     </Router>
   );
 }

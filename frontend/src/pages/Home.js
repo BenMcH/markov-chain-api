@@ -12,7 +12,9 @@ function Form({history}) {
     const [name, setName] = useState("");
     const submit = (event) => {
         event.preventDefault();
-        history.push(`/show/${name}/characters`);
+        if (name.trim().length > 0) {
+            history.push(`/show/${name}/characters`);
+        }
     }
     return (
         <form onSubmit={(event) => submit(event, history)}>
@@ -23,7 +25,7 @@ function Form({history}) {
 }
 
 function Home() {
-    const [shows] = useBackendGet('/shows', [], console.log);
+    const [shows] = useBackendGet('/shows', []);
     const RedirectForm = withRouter(Form);
     return (
         <div id="home-page">
