@@ -30,23 +30,32 @@ const buildCharacter = (show, name) => ({
   sentence: getSentence(show, name),
 });
 
-const getCharactersByShow = show => async () =>
+const getCharactersByShow = show => async ({ name: filterName }) =>
   storageAdapter
     .getCharacters(show)
     .then(({ characters }) => characters)
+    .then(c => {
+      console.log(c, filterName);
+      return c;
+    })
+    .then(characters =>
+      filterName
+        ? characters.filter(character => character.name.startsWith(filterName))
+        : characters
+    )
+    .then(c => {
+      console.log(c, filterName);
+      return c;
+    })
     .then(characters =>
       characters.map(({ name }) => buildCharacter(show, name))
-    );
+    )
+    .catch(console.log);
 
-const getAllShows = async ({ name }) => {
+const getAllShows = async name => {
   const shows = await storageAdapter.getShows();
   return shows.map(show => {
-    let characters = getCharactersByShow(show.name);
-    if (name) {
-      characters = characters.filter(character =>
-        character.name.startsWith(name)
-      );
-    }
+    const characters = getCharactersByShow(show.name, name);
     return {
       characters,
       ...show,
@@ -55,7 +64,7 @@ const getAllShows = async ({ name }) => {
 };
 
 const getShow = async ({ name }) => {
-  const shows = await getAllShows();
+  const shows = await getAllShows(name).catch(console.log);
   return shows.find(show => show.name.startsWith(name));
 };
 
