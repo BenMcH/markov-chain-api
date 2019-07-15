@@ -3,11 +3,13 @@ import axios from 'axios';
 
 const baseUrl = 'http://localhost:8252';
 
+export const get = async url => axios.get(baseUrl + url);
+
 export const useBackendGet = (url, defaultValue, errCallback = console.log) => {
     const [data, setData] = useState(defaultValue);
     const refresh = () => {
         (async () => {
-            const {data} = await axios.get(baseUrl + url).catch(errCallback);
+            const {data} = await get(url).catch(errCallback);
             setData(data);
         })();
     }

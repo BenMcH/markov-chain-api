@@ -1,11 +1,21 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
+const graphqlHTTP = require('express-graphql');
 const storageAdapter = require('./storage/neo4j');
+const graph = require('./graphql');
 
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
+app.use(
+  '/graphql',
+  graphqlHTTP({
+    schema: graph.schema,
+    rootValue: graph.resolver,
+    graphiql: true,
+  })
+);
 const port = 8252;
 
 app.get('/show/:show/characters', (req, res) => {

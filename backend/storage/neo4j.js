@@ -99,7 +99,7 @@ const getNextWord = async (word, characterId, depth = 1) => {
   return `${word} ${await getNextWord(nextWord, characterId, depth + 1)}`;
 };
 
-const generateSentence = async (show, name) => {
+exports.generateSentence = async (show, name) => {
   const firstWordQuery = `MATCH (c:character {name: $name})-[:character_in]->(show {name: $show}) 
                           MATCH (c)-[:starts_with]->(w)
                           RETURN ID(c) as id, w.value as value`;
@@ -116,7 +116,6 @@ const generateSentence = async (show, name) => {
     return getNextWord(word, characterId);
   }
 };
-exports.generateSentence = generateSentence;
 
 exports.getShows = () => {
   const query = 'MATCH(s:show) RETURN s.name as name';

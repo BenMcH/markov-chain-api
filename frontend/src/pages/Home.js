@@ -25,7 +25,7 @@ function Form({history}) {
 }
 
 function Home() {
-    const [shows] = useBackendGet('/shows', []);
+    const [{shows}] = useBackendGet('/shows', {shows: []});
     const RedirectForm = withRouter(Form);
     return (
         <div id="home-page">

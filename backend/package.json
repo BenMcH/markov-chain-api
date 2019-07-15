@@ -12,7 +12,9 @@
   "dependencies": {
     "body-parser": "^1.19.0",
     "cors": "^2.8.5",
-    "express": "^4.16.4",
+    "express": "^4.17.1",
+    "express-graphql": "^0.8.0",
+    "graphql": "^14.4.2",
     "lodash.sample": "^4.2.1",
     "neo4j-driver": "^1.7.3"
   },
