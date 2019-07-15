@@ -34,19 +34,11 @@ const getCharactersByShow = show => async ({ name: filterName }) =>
   storageAdapter
     .getCharacters(show)
     .then(({ characters }) => characters)
-    .then(c => {
-      console.log(c, filterName);
-      return c;
-    })
     .then(characters =>
       filterName
         ? characters.filter(character => character.name.startsWith(filterName))
         : characters
     )
-    .then(c => {
-      console.log(c, filterName);
-      return c;
-    })
     .then(characters =>
       characters.map(({ name }) => buildCharacter(show, name))
     )
