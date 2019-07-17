@@ -1,6 +1,6 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import { Link, withRouter } from 'react-router-dom';
-import { useBackendGet } from '../components/Backend';
+import { getShows } from '../components/GraphQL';
 
 function Show({name: show}, index) {
     return (
@@ -25,7 +25,11 @@ function Form({history}) {
 }
 
 function Home() {
-    const [{shows}] = useBackendGet('/shows', {shows: []});
+    const [{shows}, setShows] = useState({shows: []});
+    const fetchShows = () => {
+        getShows().then(({data}) => setShows(data))
+    }
+    useEffect(fetchShows, []);
     const RedirectForm = withRouter(Form);
     return (
         <div id="home-page">

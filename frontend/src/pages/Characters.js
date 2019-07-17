@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useBackendGet } from '../components/Backend';
 import SingleAttributeForm from '../components/SingleAttributeForm'
+import {getCharacters} from '../components/GraphQL';
 
 
 function character(name, show, index) {
@@ -12,7 +12,13 @@ function character(name, show, index) {
 
 function Characters(props) {
     const show = props.match.params.show;
-    const [{characters}, refreshCharacters] = useBackendGet(`/show/${show}/characters`, {characters: []});
+    const [{characters}, setCharacters] = useState({characters: []});
+    const refreshCharacters = () => {
+        getCharacters(show).then(({data}) => {
+            setCharacters(data.show);
+        }).catch(console.log);
+    }
+    useEffect(refreshCharacters, []);
     return (
         <div id="characters-page">
             <h1>{show} Characters</h1>
