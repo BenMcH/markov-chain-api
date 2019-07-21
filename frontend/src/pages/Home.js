@@ -1,14 +1,14 @@
-import React, {useState, useEffect} from 'react';
+import React, { useState } from 'react';
 import { Link, withRouter } from 'react-router-dom';
-import { getShows } from '../components/GraphQL';
+import { Query } from 'react-apollo';
+import gql from 'graphql-tag';
 
-function Show({name: show}, index) {
-    return (
-        <li key={index}><Link to={`/show/${show}/characters`}>{show}</Link></li>
-    );
-}
+const Show = ({name: show}, index) => (
+    <li key={index}><Link to={`/show/${show}/characters`}>{show}</Link></li>
+);
 
-function Form({history}) {
+
+const Form = ({history}) => {
     const [name, setName] = useState("");
     const submit = (event) => {
         event.preventDefault();
@@ -24,23 +24,38 @@ function Form({history}) {
     )
 }
 
-function Home() {
-    const [{shows}, setShows] = useState({shows: []});
-    const fetchShows = () => {
-        getShows().then(({data}) => setShows(data))
-    }
-    useEffect(fetchShows, []);
+const showQuery = gql`
+    query Shows {
+        shows {
+            name
+        }
+    }`;
+
+const ShowProvider = ({children}) => (
+    <Query query={showQuery}>
+        {children}
+    </Query>
+)
+
+const ShowsList = ({loading, error, data}) => {
     const RedirectForm = withRouter(Form);
+
+    if (loading) return <p>Loading...</p>;
+    if (error) return <p>Error :(</p>
     return (
         <div id="home-page">
             <h1>Shows</h1>
             <ul>
-                {shows.map(Show)}
+                {data.shows.map(Show)}
             </ul>
             <h2>Show Not Listed? Enter your own!</h2>
             <RedirectForm />
         </div>
-    )
+    );
 }
+
+const Home = () => (
+    <ShowProvider>{ShowsList}</ShowProvider>
+)
 
 export default Home;

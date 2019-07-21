@@ -1,29 +1,47 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import SingleAttributeForm from '../components/SingleAttributeForm';
-import { getSentence } from '../components/GraphQL'
+import { Query } from 'react-apollo';
+import gql from 'graphql-tag';
 
-function Character(props) {
-    const {show, character} = props.match.params;
-    const [sentence, setSentence] = useState("");
-    const getNewSentence = () => {
-        console.log("Here")
-        getSentence(show, character).then(({data: {show: { characters: [{ sentence }] } }}) => {
-            setSentence(sentence);
-        })
-    };
+const sentenceQuery = (show, character) => gql`
+    query Sentence {
+        show(name:"${show}") {
+            characters(name:"${character}") {
+                sentence
+            }
+        }
+    }`;
+
+const Sentence = ({show, character}) => {
+    const query = sentenceQuery(show, character);
     return (
-        <div id="character-page">
-            <h1>{character}</h1>
-            <p>Starring in: {show}</p>
-            <h2>Generate sentence</h2>
-            <p>{sentence}</p>
-            <button onClick={() => getNewSentence()}>Get a new sentence</button>
-            <h2>Add sentence</h2>
-            <SingleAttributeForm url={`/show/${show}/${character}/sentence`} attributeName="text" />
-            <Link to={`/show/${show}/characters`}>Back</Link>
-        </div>
+        <Query query={query}>
+            {({ loading, error, data, refetch: getNewSentence }) => {
+                if (loading) return <p>Loading...</p>;
+                if (error) return <p>Error :(</p>;
+        
+                return data.show.characters.map(({ sentence }) => (
+                <div key={sentence}>
+                    <p>{sentence}</p>
+                    <button onClick={() => getNewSentence()}>Get a new sentence</button>
+                </div>
+                ));
+            }}
+        </Query>
     )
-}
+    }
+
+const Character = ({match: { params: { show, character }}}) => (
+    <div id="character-page">
+        <h1>{character}</h1>
+        <p>Starring in: {show}</p>
+        <h2>Generate sentence</h2>
+        <Sentence show={show} character={character}/>
+        <h2>Add sentence</h2>
+        <SingleAttributeForm url={`/show/${show}/${character}/sentence`} attributeName="text" />
+        <Link to={`/show/${show}/characters`}>Back</Link>
+    </div>
+)
 
 export default Character;
